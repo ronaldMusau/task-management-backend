@@ -13,13 +13,13 @@ class Task extends Model
         'title',
         'description',
         'status',
-        'deadline' => 'datetime',
+        'deadline',
         'assigned_to',
         'created_by',
     ];
 
     protected $casts = [
-        'deadline' => 'date',
+        'deadline' => 'datetime',
     ];
 
     // Relationships

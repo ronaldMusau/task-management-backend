@@ -42,15 +42,39 @@ class AuthController extends Controller
 
             Log::info('User created successfully', ['user_id' => $user->id]);
 
-            $token = JWTAuth::fromUser($user);
-            Log::info('JWT token generated for user', ['user_id' => $user->id]);
+            // Generate token with custom claims
+            try {
+                $token = JWTAuth::customClaims([
+                    'user_id' => $user->id,
+                    'role' => $user->role,
+                    'email' => $user->email
+                ])->fromUser($user);
+
+                Log::info('JWT token generated for user', ['user_id' => $user->id]);
+            } catch (JWTException $e) {
+                Log::error('JWT token generation failed', [
+                    'error' => $e->getMessage(),
+                    'user_id' => $user->id
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'User registered successfully but token generation failed',
+                    'user' => $user,
+                    'token' => null,
+                    'warning' => 'Token generation failed: ' . $e->getMessage()
+                ], 201);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'User registered successfully',
                 'user' => $user,
-                'token' => $token
+                'token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => config('jwt.ttl') * 60
             ], 201);
+
         } catch (\Exception $e) {
             Log::error('Registration failed', ['error' => $e->getMessage()]);
             return response()->json([
@@ -67,7 +91,7 @@ class AuthController extends Controller
 
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'password' => 'required|string|min:6'
+            'password' => 'required|string'
         ]);
 
         if ($validator->fails()) {
@@ -82,30 +106,57 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
         Log::info('Attempting login with credentials', ['email' => $credentials['email']]);
 
-        try {
-            if (!$token = JWTAuth::attempt($credentials)) {
-                Log::warning('Login failed - invalid credentials', ['email' => $credentials['email']]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid credentials'
-                ], 401);
-            }
+        // First, let's check if the user exists
+        $user = User::where('email', $credentials['email'])->first();
+        if (!$user) {
+            Log::warning('Login failed - user not found', ['email' => $credentials['email']]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials'
+            ], 401);
+        }
 
-            Log::info('Login successful', ['user_id' => auth()->id()]);
+        Log::info('User found', ['user_id' => $user->id, 'role' => $user->role]);
+
+        // Check password manually for debugging
+        $passwordMatches = Hash::check($credentials['password'], $user->password);
+        Log::info('Password check result', ['matches' => $passwordMatches]);
+
+        if (!$passwordMatches) {
+            Log::warning('Login failed - password mismatch', ['email' => $credentials['email']]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials'
+            ], 401);
+        }
+
+        try {
+            // Generate token with custom claims
+            $token = JWTAuth::customClaims([
+                'user_id' => $user->id,
+                'role' => $user->role,
+                'email' => $user->email
+            ])->fromUser($user);
+
+            Log::info('Login successful', ['user_id' => $user->id, 'role' => $user->role]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Login successful',
+                'user' => $user,
+                'token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => config('jwt.ttl') * 60
+            ]);
+
         } catch (JWTException $e) {
             Log::error('JWT creation failed', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Could not create token'
+                'message' => 'Could not create token',
+                'error' => $e->getMessage()
             ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'user' => auth()->user(),
-            'token' => $token
-        ]);
     }
 
     public function me()
@@ -119,18 +170,24 @@ class AuthController extends Controller
 
     public function logout()
     {
-        Log::info('Logout endpoint accessed', ['user_id' => auth()->id()]);
-
         try {
-            JWTAuth::invalidate(JWTAuth::getToken());
-            Log::info('User logged out successfully', ['user_id' => auth()->id()]);
-        } catch (\Exception $e) {
-            Log::error('Logout failed', ['error' => $e->getMessage()]);
-        }
+            $token = JWTAuth::getToken();
+            JWTAuth::invalidate($token);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Successfully logged out'
-        ]);
+            // Add these lines to ensure complete logout
+            auth()->logout();
+            JWTAuth::parseToken()->invalidate();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully logged out'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to logout',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

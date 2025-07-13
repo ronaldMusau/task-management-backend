@@ -8,20 +8,26 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminSeeder extends Seeder
 {
+    // database/seeders/AdminSeeder.php
     public function run()
     {
-        User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin'
-        ]);
+        // Use updateOrCreate to prevent duplicates
+        User::updateOrCreate(
+            ['email' => 'admin@gmail.com'],
+            [
+                'name' => 'Admin User',
+                'password' => Hash::make('Ronald123!'), // Ensure proper hashing
+                'role' => 'admin'
+            ]
+        );
 
-        User::create([
-            'name' => 'Test User',
-            'email' => 'user@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'user'
-        ]);
+        User::updateOrCreate(
+            ['email' => 'user@gmail.com'],
+            [
+                'name' => 'Test User',
+                'password' => Hash::make('Ronald123!'),
+                'role' => 'user'
+            ]
+        );
     }
 }

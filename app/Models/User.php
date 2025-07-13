@@ -26,7 +26,6 @@ class User extends Authenticatable implements JWTSubject
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
     ];
 
     // JWT methods
@@ -37,7 +36,11 @@ class User extends Authenticatable implements JWTSubject
 
     public function getJWTCustomClaims()
     {
-        return [];
+        return [
+            'user_id' => $this->id,
+            'role' => $this->role,
+            'email' => $this->email,
+        ];
     }
 
     // Relationships
