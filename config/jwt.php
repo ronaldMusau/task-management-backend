@@ -7,8 +7,8 @@ return [
         'private' => env('JWT_PRIVATE_KEY'),
         'passphrase' => env('JWT_PASSPHRASE'),
     ],
-    'ttl' => (int) env('JWT_TTL', 60), // Cast to integer
-    'refresh_ttl' => (int) env('JWT_REFRESH_TTL', 20160), // Cast to integer
+    'ttl' => (int) env('JWT_TTL', 60),
+    'refresh_ttl' => (int) env('JWT_REFRESH_TTL', 20160), 
     'algo' => env('JWT_ALGO', 'HS256'),
     'required_claims' => [
         'iss',

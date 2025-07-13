@@ -1,8 +1,5 @@
 <?php
 
-// Create this file as: routes/diagnostic.php
-// Then include it in your routes/web.php: require_once __DIR__ . '/diagnostic.php';
-
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -10,7 +7,6 @@ use Illuminate\Support\Facades\Log;
 Route::get('/diagnostic', function () {
     $diagnostics = [];
 
-    // Check Laravel installation
     $diagnostics['laravel_version'] = app()->version();
     $diagnostics['php_version'] = phpversion();
     $diagnostics['app_env'] = config('app.env');

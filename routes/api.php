@@ -6,7 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\DebugController;
 use Illuminate\Support\Facades\Route;
 
-// Test route to check if API is working
+// Test route 
 Route::get('/test', function () {
     return response()->json([
         'success' => true,
@@ -15,7 +15,7 @@ Route::get('/test', function () {
     ]);
 });
 
-// Debug routes (remove these in production)
+// Debug routes 
 Route::prefix('debug')->group(function () {
     Route::get('/jwt-config', [DebugController::class, 'testJWTConfig']);
     Route::get('/token-generation', [DebugController::class, 'testTokenGeneration']);
@@ -25,11 +25,6 @@ Route::prefix('debug')->group(function () {
     Route::post('/clear-logs', [DebugController::class, 'clearLogs']);
 });
 
-// Public routes
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-
-// Protected routes
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

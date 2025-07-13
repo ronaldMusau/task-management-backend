@@ -21,8 +21,6 @@ class Task extends Model
     protected $casts = [
         'deadline' => 'datetime',
     ];
-
-    // Relationships
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');

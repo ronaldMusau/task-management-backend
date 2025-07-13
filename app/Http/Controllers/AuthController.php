@@ -42,7 +42,6 @@ class AuthController extends Controller
 
             Log::info('User created successfully', ['user_id' => $user->id]);
 
-            // Generate token with custom claims
             try {
                 $token = JWTAuth::customClaims([
                     'user_id' => $user->id,
@@ -105,8 +104,6 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
         Log::info('Attempting login with credentials', ['email' => $credentials['email']]);
-
-        // First, let's check if the user exists
         $user = User::where('email', $credentials['email'])->first();
         if (!$user) {
             Log::warning('Login failed - user not found', ['email' => $credentials['email']]);
@@ -117,8 +114,6 @@ class AuthController extends Controller
         }
 
         Log::info('User found', ['user_id' => $user->id, 'role' => $user->role]);
-
-        // Check password manually for debugging
         $passwordMatches = Hash::check($credentials['password'], $user->password);
         Log::info('Password check result', ['matches' => $passwordMatches]);
 
@@ -131,7 +126,6 @@ class AuthController extends Controller
         }
 
         try {
-            // Generate token with custom claims
             $token = JWTAuth::customClaims([
                 'user_id' => $user->id,
                 'role' => $user->role,
@@ -174,7 +168,6 @@ class AuthController extends Controller
             $token = JWTAuth::getToken();
             JWTAuth::invalidate($token);
 
-            // Add these lines to ensure complete logout
             auth()->logout();
             JWTAuth::parseToken()->invalidate();
 

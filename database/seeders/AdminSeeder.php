@@ -11,12 +11,11 @@ class AdminSeeder extends Seeder
     // database/seeders/AdminSeeder.php
     public function run()
     {
-        // Use updateOrCreate to prevent duplicates
         User::updateOrCreate(
             ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Admin User',
-                'password' => Hash::make('Ronald123!'), // Ensure proper hashing
+                'password' => Hash::make('Ronald123!'), 
                 'role' => 'admin'
             ]
         );

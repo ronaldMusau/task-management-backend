@@ -27,7 +27,6 @@ class DebugController extends Controller
     public function testTokenGeneration()
     {
         try {
-            // Get the first user
             $user = User::first();
 
             if (!$user) {
@@ -37,7 +36,7 @@ class DebugController extends Controller
                 ], 404);
             }
 
-            // Try to generate token
+            // generate token
             $token = JWTAuth::fromUser($user);
 
             return response()->json([
@@ -61,7 +60,6 @@ class DebugController extends Controller
     public function testTokenValidation(Request $request)
     {
         try {
-            // Get token from Authorization header
             $token = $request->bearerToken();
 
             if (!$token) {
@@ -71,7 +69,6 @@ class DebugController extends Controller
                 ], 400);
             }
 
-            // Try to parse and authenticate
             $user = JWTAuth::parseToken()->authenticate();
 
             return response()->json([

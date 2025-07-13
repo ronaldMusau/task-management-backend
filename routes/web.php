@@ -1,6 +1,5 @@
 <?php
 
-// Add these routes to your routes/web.php file
 
 use Illuminate\Support\Facades\Route;
 use App\Models\User;

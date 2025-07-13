@@ -28,7 +28,6 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
     ];
 
-    // JWT methods
     public function getJWTIdentifier()
     {
         return $this->getKey();
@@ -43,7 +42,6 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-    // Relationships
     public function assignedTasks()
     {
         return $this->hasMany(Task::class, 'assigned_to');
@@ -54,7 +52,6 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Task::class, 'created_by');
     }
 
-    // Helper methods
     public function isAdmin()
     {
         return $this->role === 'admin';
