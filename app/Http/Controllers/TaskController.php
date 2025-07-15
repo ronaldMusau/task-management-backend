@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\User;
+use App\Models\Admin;
 use App\Notifications\TaskAssigned;
 use App\Notifications\TaskStatusChanged;
 use Illuminate\Http\Request;
@@ -15,13 +16,13 @@ class TaskController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $authUser = auth()->user();
 
-        if ($user->isAdmin()) {
+        if ($authUser instanceof Admin) {
             $tasks = Task::with(['assignee', 'creator'])->get();
         } else {
             $tasks = Task::with(['assignee', 'creator'])
-                ->where('assigned_to', $user->id)
+                ->where('assigned_to', $authUser->id)
                 ->get();
         }
 
@@ -52,6 +53,7 @@ class TaskController extends Controller
 
         $tasks = [];
         $creatorId = auth()->id();
+        $isAdmin = auth()->user() instanceof Admin;
 
         foreach ($request->assigned_to as $index => $email) {
             $user = User::where('email', $email)->first();
@@ -63,6 +65,7 @@ class TaskController extends Controller
                 'deadline' => $deadline,
                 'assigned_to' => $user->id,
                 'created_by' => $creatorId,
+                'created_by_admin' => $isAdmin,
                 'status' => 'pending'
             ]);
 
@@ -117,6 +120,7 @@ class TaskController extends Controller
 
         $tasks = [];
         $creatorId = auth()->id();
+        $isAdmin = auth()->user() instanceof Admin;
 
         foreach ($users as $user) {
             $task = Task::create([
@@ -125,6 +129,7 @@ class TaskController extends Controller
                 'deadline' => $request->deadline,
                 'assigned_to' => $user->id,
                 'created_by' => $creatorId,
+                'created_by_admin' => $isAdmin,
                 'status' => 'pending'
             ]);
 
@@ -147,12 +152,11 @@ class TaskController extends Controller
         ], 201);
     }
 
-
     public function show(Task $task)
     {
-        $user = auth()->user();
+        $authUser = auth()->user();
 
-        if (!$user->isAdmin() && $task->assigned_to !== $user->id) {
+        if (!($authUser instanceof Admin) && $task->assigned_to !== $authUser->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'You can only view tasks assigned to you'
@@ -206,9 +210,9 @@ class TaskController extends Controller
 
     public function updateStatus(Request $request, Task $task)
     {
-        $user = auth()->user();
+        $authUser = auth()->user();
 
-        if ($task->assigned_to !== $user->id) {
+        if ($task->assigned_to !== $authUser->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'You can only update status of tasks assigned to you'
@@ -245,4 +249,64 @@ class TaskController extends Controller
         ]);
     }
 
+    public function userTasks(Request $request)
+    {
+        $user = $request->user();
+        $tasks = $user->tasks()
+            ->with('assignee')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'tasks' => $tasks,
+        ]);
+    }
+
+
+
+
+
+
+    public function userStats(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            return response()->json([
+                'success' => true,
+                'total_tasks' => $user->tasks()->count(),
+                'pending_tasks' => $user->tasks()->where('status', 'pending')->count(),
+                'completed_tasks' => $user->tasks()->where('status', 'completed')->count()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch user stats',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function recentTasks(Request $request)
+    {
+        try {
+            $tasks = $request->user()->tasks()
+                ->with('assignee')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'tasks' => $tasks
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch recent tasks',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

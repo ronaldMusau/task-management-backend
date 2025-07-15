@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -10,21 +10,20 @@ use Illuminate\Support\Facades\Log;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
-class AuthController extends Controller
+class AdminAuthController extends Controller
 {
     public function register(Request $request)
     {
-        Log::info('Register endpoint accessed', ['request_data' => $request->all()]);
+        Log::info('Admin register endpoint accessed', ['request_data' => $request->all()]);
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:admins',
             'password' => 'required|string|min:6|confirmed',
-            'role' => 'sometimes|in:admin,user'
         ]);
 
         if ($validator->fails()) {
-            Log::warning('Registration validation failed', ['errors' => $validator->errors()]);
+            Log::warning('Admin registration validation failed', ['errors' => $validator->errors()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -33,33 +32,32 @@ class AuthController extends Controller
         }
 
         try {
-            $user = User::create([
+            $admin = Admin::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'role' => $request->role ?? 'user'
             ]);
 
-            Log::info('User created successfully', ['user_id' => $user->id]);
+            Log::info('Admin created successfully', ['admin_id' => $admin->id]);
 
             try {
                 $token = JWTAuth::customClaims([
-                    'user_id' => $user->id,
-                    'role' => $user->role,
-                    'email' => $user->email
-                ])->fromUser($user);
+                    'user_id' => $admin->id,
+                    'role' => 'admin',
+                    'email' => $admin->email
+                ])->fromUser($admin);
 
-                Log::info('JWT token generated for user', ['user_id' => $user->id]);
+                Log::info('JWT token generated for admin', ['admin_id' => $admin->id]);
             } catch (JWTException $e) {
                 Log::error('JWT token generation failed', [
                     'error' => $e->getMessage(),
-                    'user_id' => $user->id
+                    'admin_id' => $admin->id
                 ]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'User registered successfully but token generation failed',
-                    'user' => $user,
+                    'message' => 'Admin registered successfully but token generation failed',
+                    'admin' => $admin,
                     'token' => null,
                     'warning' => 'Token generation failed: ' . $e->getMessage()
                 ], 201);
@@ -67,15 +65,15 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'User registered successfully',
-                'user' => $user,
+                'message' => 'Admin registered successfully',
+                'admin' => $admin,
                 'token' => $token,
                 'token_type' => 'bearer',
                 'expires_in' => config('jwt.ttl') * 60
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Registration failed', ['error' => $e->getMessage()]);
+            Log::error('Admin registration failed', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Registration failed',
@@ -86,15 +84,16 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        Log::info('Login endpoint accessed', ['email' => $request->email]);
+        Log::info('Admin login endpoint accessed', ['email' => $request->email]);
 
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'password' => 'required|string'
+            'password' => 'required|string',
+            'role' => 'required|in:user,admin'
         ]);
 
         if ($validator->fails()) {
-            Log::warning('Login validation failed', ['errors' => $validator->errors()]);
+            Log::warning('Admin login validation failed', ['errors' => $validator->errors()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -102,23 +101,31 @@ class AuthController extends Controller
             ], 400);
         }
 
+        if ($request->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please use the user login endpoint'
+            ], 400);
+        }
+
         $credentials = $request->only('email', 'password');
-        Log::info('Attempting login with credentials', ['email' => $credentials['email']]);
-        $user = User::where('email', $credentials['email'])->first();
-        if (!$user) {
-            Log::warning('Login failed - user not found', ['email' => $credentials['email']]);
+        Log::info('Attempting admin login with credentials', ['email' => $credentials['email']]);
+
+        $admin = Admin::where('email', $credentials['email'])->first();
+        if (!$admin) {
+            Log::warning('Admin login failed - admin not found', ['email' => $credentials['email']]);
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials'
             ], 401);
         }
 
-        Log::info('User found', ['user_id' => $user->id, 'role' => $user->role]);
-        $passwordMatches = Hash::check($credentials['password'], $user->password);
+        Log::info('Admin found', ['admin_id' => $admin->id]);
+        $passwordMatches = Hash::check($credentials['password'], $admin->password);
         Log::info('Password check result', ['matches' => $passwordMatches]);
 
         if (!$passwordMatches) {
-            Log::warning('Login failed - password mismatch', ['email' => $credentials['email']]);
+            Log::warning('Admin login failed - password mismatch', ['email' => $credentials['email']]);
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials'
@@ -127,17 +134,17 @@ class AuthController extends Controller
 
         try {
             $token = JWTAuth::customClaims([
-                'user_id' => $user->id,
-                'role' => $user->role,
-                'email' => $user->email
-            ])->fromUser($user);
+                'user_id' => $admin->id,
+                'role' => 'admin',
+                'email' => $admin->email
+            ])->fromUser($admin);
 
-            Log::info('Login successful', ['user_id' => $user->id, 'role' => $user->role]);
+            Log::info('Admin login successful', ['admin_id' => $admin->id]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful',
-                'user' => $user,
+                'admin' => $admin,
                 'token' => $token,
                 'token_type' => 'bearer',
                 'expires_in' => config('jwt.ttl') * 60
@@ -155,10 +162,10 @@ class AuthController extends Controller
 
     public function me()
     {
-        Log::info('Me endpoint accessed', ['user_id' => auth()->id()]);
+        Log::info('Admin me endpoint accessed', ['admin_id' => auth('admin')->id()]);
         return response()->json([
             'success' => true,
-            'user' => auth()->user()
+            'admin' => auth('admin')->user()
         ]);
     }
 
@@ -168,7 +175,7 @@ class AuthController extends Controller
             $token = JWTAuth::getToken();
             JWTAuth::invalidate($token);
 
-            auth()->logout();
+            auth('admin')->logout();
             JWTAuth::parseToken()->invalidate();
 
             return response()->json([

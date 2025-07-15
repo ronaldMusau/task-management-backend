@@ -8,7 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable implements JWTSubject
+class Admin extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
 
@@ -27,6 +27,11 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
     ];
 
+    public function isAdmin()
+    {
+        return true; // Since this is the Admin model
+    }
+
     public function getJWTIdentifier()
     {
         return $this->getKey();
@@ -36,15 +41,13 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'user_id' => $this->id,
-            'role' => 'user',
+            'role' => 'admin',
             'email' => $this->email,
         ];
     }
 
-
-    public function tasks()
+    public function createdTasks()
     {
-        return $this->hasMany(Task::class, 'assigned_to');
+        return $this->hasMany(Task::class, 'created_by');
     }
-
 }

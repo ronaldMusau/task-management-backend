@@ -16,11 +16,14 @@ class Task extends Model
         'deadline',
         'assigned_to',
         'created_by',
+        'created_by_admin',
     ];
 
     protected $casts = [
         'deadline' => 'datetime',
+        'created_by_admin' => 'boolean',
     ];
+
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');
